@@ -1,25 +1,42 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 
 import { AuthService } from './auth.service';
+import { Store, select } from '@ngrx/store';
+import { Subscription } from 'rxjs';
+import * as fromUser from './state/user.reducer';
+import { takeWhile } from 'rxjs/operators';
 
 @Component({
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   pageTitle = 'Log In';
   errorMessage: string;
+  sub: Subscription;
 
   maskUserName: boolean;
+  componentActive = true;
 
   constructor(private authService: AuthService,
-              private router: Router) {
+              private router: Router,
+              private store: Store<fromUser.UserState>) {
   }
 
   ngOnInit(): void {
+    
 
+// TODO unsubcribe
+   this.store.pipe(select(fromUser.getShowUserName),
+   takeWhile(() => this.componentActive)).subscribe(
+     showUserName => this.maskUserName = showUserName
+   );
+  }
+
+  ngOnDestroy(): void {
+     this.componentActive = false;
   }
 
   cancel(): void {
@@ -27,7 +44,10 @@ export class LoginComponent implements OnInit {
   }
 
   checkChanged(value: boolean): void {
-    this.maskUserName = value;
+    this.store.dispatch({
+      type: 'TOGGLE_MASK_USERNAME',
+      payload: value
+    });
   }
 
   login(loginForm: NgForm): void {
